@@ -26,17 +26,30 @@ const Footer = () => {
                         </p>
                     </div>
                 </div>
-                <div className="pt-4 text-center">
-                    <p className="text-xs text-slate-500">
-                        Rights Reserved for{' '}
-                        <a href="https://ashfaaqkt.com" className="text-slate-300 hover:text-emerald-200 transition-colors">
-                            Ashfaaq KT
-                        </a>{' '}
-                        <a href="https://ashtechnologiesolutions.com" className="text-slate-300 hover:text-emerald-200 transition-colors">
-                            & AshTech
-                        </a>{' '}
-                        © {new Date().getFullYear()}
+                <div className="pt-4 border-t border-white/5 mt-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <p className="text-xs text-slate-600">
+                        © {new Date().getFullYear()} All rights reserved.
                     </p>
+                    <div className="flex items-center gap-1 text-xs text-slate-600">
+                        <span>Built by</span>
+                        <a
+                            href="https://ashfaaqkt.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-emerald-300 transition-colors font-medium"
+                        >
+                            Ashfaaq KT
+                        </a>
+                        <span className="text-slate-700">·</span>
+                        <a
+                            href="https://ashtechnologiesolutions.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-emerald-300 transition-colors font-medium"
+                        >
+                            AshTech
+                        </a>
+                    </div>
                 </div>
             </div>
         </footer>
