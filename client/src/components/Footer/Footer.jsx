@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
     return (
@@ -9,6 +10,12 @@ const Footer = () => {
                         <p className="font-display text-lg text-white">
                             Study<span className="text-emerald-300">Buddy.</span>
                         </p>
+                        <Link
+                            to="/terms"
+                            className="text-[11px] uppercase tracking-[0.2em] text-slate-500 hover:text-emerald-300 transition-colors"
+                        >
+                            Terms &amp; Conditions
+                        </Link>
                     </div>
 
                     <div className="text-center md:text-right space-y-1">

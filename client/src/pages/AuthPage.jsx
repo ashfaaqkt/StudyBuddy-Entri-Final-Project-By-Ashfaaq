@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { HiOutlineSparkles } from 'react-icons/hi';
+import { HiOutlineSparkles, HiCheck } from 'react-icons/hi';
 
 const AuthPage = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [form, setForm] = useState({ name: '', email: '', password: '' });
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [error, setError] = useState('');
     const { login, register, authLoading } = useAuth();
     const navigate = useNavigate();
@@ -18,6 +19,10 @@ const AuthPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        if (!isLogin && !agreedToTerms) {
+            setError('Please agree to the Terms & Conditions to create an account.');
+            return;
+        }
         try {
             if (isLogin) {
                 await login(form.email, form.password);
@@ -83,6 +88,36 @@ const AuthPage = () => {
                         />
                     </div>
 
+                    {!isLogin && (
+                        <button
+                            type="button"
+                            onClick={() => { setAgreedToTerms((p) => !p); setError(''); }}
+                            className="flex items-start gap-3 w-full text-left group"
+                        >
+                            {/* Custom checkbox */}
+                            <span className={`
+                                flex-shrink-0 mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center
+                                transition-all duration-200
+                                ${agreedToTerms
+                                    ? 'bg-emerald-400 border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.45)]'
+                                    : 'border-white/20 bg-white/5 group-hover:border-emerald-400/60'
+                                }
+                            `}>
+                                {agreedToTerms && <HiCheck className="text-[#0b0f14] text-xs font-bold" />}
+                            </span>
+                            <span className="text-slate-400 text-sm leading-snug group-hover:text-slate-300 transition-colors">
+                                I have read and agree to the{' '}
+                                <Link
+                                    to="/terms"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-emerald-300 hover:underline"
+                                >
+                                    Terms &amp; Conditions
+                                </Link>
+                            </span>
+                        </button>
+                    )}
+
                     {error && (
                         <p className="text-amber-300 text-sm">{error}</p>
                     )}
@@ -102,7 +137,7 @@ const AuthPage = () => {
                     {isLogin ? "Don't have an account? " : 'Already have an account? '}
                     <button
                         type="button"
-                        onClick={() => { setIsLogin((p) => !p); setError(''); }}
+                        onClick={() => { setIsLogin((p) => !p); setError(''); setAgreedToTerms(false); }}
                         className="text-emerald-300 hover:underline"
                     >
                         {isLogin ? 'Sign up' : 'Sign in'}

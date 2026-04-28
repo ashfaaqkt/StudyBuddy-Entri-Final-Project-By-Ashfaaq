@@ -9,6 +9,7 @@ import AuthPage from './pages/AuthPage';
 import NoteEditor from './pages/NoteEditor';
 import QuizPage from './pages/QuizPage';
 import NotFound from './pages/NotFound';
+import TermsPage from './pages/TermsPage';
 import ProgressChart from './components/Stats/ProgressChart';
 import TimerOverlay from './components/Tools/TimerOverlay';
 import GeminiChat from './components/Tools/GeminiChat';
@@ -33,6 +34,7 @@ function AppShell() {
                             <Route path="/edit-note/:id" element={<ProtectedRoute><NoteEditor /></ProtectedRoute>} />
                             <Route path="/take-quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
                             <Route path="/stats" element={<ProtectedRoute><ProgressChart /></ProtectedRoute>} />
+                            <Route path="/terms" element={<TermsPage />} />
                             <Route path="*" element={<NotFound />} />
                         </Routes>
                     </main>
