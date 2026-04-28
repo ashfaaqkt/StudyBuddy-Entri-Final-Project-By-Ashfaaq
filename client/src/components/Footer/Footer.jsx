@@ -15,7 +15,7 @@ const Footer = () => {
                         <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Developed by</p>
                         <p className="text-sm font-semibold text-slate-200">
                             <span>Ashfaaq KT For Entri Elevate</span>
-                            <span className="block">Mini Project - MERN</span>
+                            <span className="block">Final Main Project - MERN</span>
                         </p>
                     </div>
                 </div>
@@ -24,6 +24,9 @@ const Footer = () => {
                         Rights Reserved for{' '}
                         <a href="https://ashfaaqkt.com" className="text-slate-300 hover:text-emerald-200 transition-colors">
                             Ashfaaq KT
+                        </a>{' '}
+                        <a href="https://ashtechnologiesolutions.com" className="text-slate-300 hover:text-emerald-200 transition-colors">
+                            & AshTech
                         </a>{' '}
                         © {new Date().getFullYear()}
                     </p>
