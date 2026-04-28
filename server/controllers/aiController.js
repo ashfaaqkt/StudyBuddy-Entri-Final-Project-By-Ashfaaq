@@ -76,9 +76,60 @@ const saveScore = async (req, res) => {
     return res.status(201).json(quizScore);
 };
 
+const generateTable = async (req, res) => {
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: 'content is required' });
+
+    const model = getModel();
+    const prompt = `Create a concise HTML table that summarizes the notes.
+Rules:
+- Return ONLY the <table>...</table> HTML (no markdown, no backticks, no extra text).
+- Include class="sb-ai-table" on the <table>.
+- Use 3 columns: Topic, Key Points, Example.
+- Keep 3-6 rows.
+Notes:
+${normalizeContent(content)}`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    return res.json({ table: text });
+};
+
+const rewrite = async (req, res) => {
+    const { content, style = 'neutral' } = req.body;
+    if (!content) return res.status(400).json({ message: 'content is required' });
+
+    const model = getModel();
+    const prompt = `Rewrite the following notes in a ${style} writing style.
+Keep the meaning intact. Preserve lists where possible. Return plain text.
+Notes:
+${normalizeContent(content)}`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    return res.json({ rewritten: text });
+};
+
+const chat = async (req, res) => {
+    const { messages } = req.body;
+    if (!Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ message: 'messages array is required' });
+    }
+
+    const model = getModel();
+    const history = messages
+        .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+        .join('\n');
+    const prompt = `You are a helpful study assistant. Keep answers concise, clear, and relevant to students. Use markdown for simple formatting if needed (bold, lists).\n\nChat History:\n${history}\nAssistant:`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    return res.json({ reply: text });
+};
+
 const getScores = async (req, res) => {
     const scores = await QuizScore.find({ user: req.user._id }).sort({ createdAt: -1 });
     return res.json(scores);
 };
 
-module.exports = { summarize, generateQuiz, saveScore, getScores };
+module.exports = { summarize, generateQuiz, generateTable, rewrite, saveScore, getScores };

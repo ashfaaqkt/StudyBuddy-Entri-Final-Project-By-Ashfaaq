@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { useLocation } from 'react-router-dom';
 import { HiSparkles, HiOutlineX, HiOutlinePaperAirplane, HiOutlineDotsHorizontal, HiOutlineDuplicate, HiOutlineCheck } from 'react-icons/hi';
-import { chatWithGemini } from '../../services/gemini';
+import api from '../../services/api';
 import { renderMarkdown } from '../../utils/helpers';
 
 const GeminiChat = () => {
@@ -43,8 +43,8 @@ const GeminiChat = () => {
 
         try {
             const history = [...messages, userMsg];
-            const response = await chatWithGemini(history);
-            setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+            const { data } = await api.post('/ai/chat', { messages: history });
+            setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
         } catch (error) {
             setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
         } finally {

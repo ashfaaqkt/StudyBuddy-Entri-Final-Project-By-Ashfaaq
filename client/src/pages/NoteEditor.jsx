@@ -5,7 +5,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import api from '../services/api';
-import { generateNoteTable, rewriteNote } from '../services/gemini';
 import { renderMarkdown } from '../utils/helpers';
 import { HiOutlineArrowLeft, HiOutlineSparkles, HiOutlineTable, HiOutlineSave, HiOutlinePencilAlt, HiSparkles, HiChevronDown, HiOutlineCheck, HiOutlinePaperClip, HiOutlineShare, HiOutlinePrinter, HiOutlinePhotograph, HiOutlineLink, HiOutlineMicrophone, HiOutlineDownload, HiOutlineSun, HiOutlineMoon } from 'react-icons/hi';
 import ResourceLinks from '../components/Tools/ResourceLinks';
@@ -662,9 +661,9 @@ const NoteEditor = () => {
         setAiResult(null);
         setShowAiModal(true);
         try {
-            const tableHtml = await generateNoteTable(content);
-            const isHtmlTable = typeof tableHtml === 'string' && tableHtml.trim().toLowerCase().startsWith('<table');
-            setAiResult({ type: 'Table', content: tableHtml, format: isHtmlTable ? 'html' : 'text' });
+            const { data } = await api.post('/ai/table', { content });
+            const isHtmlTable = typeof data.table === 'string' && data.table.trim().toLowerCase().startsWith('<table');
+            setAiResult({ type: 'Table', content: data.table, format: isHtmlTable ? 'html' : 'text' });
         } catch (error) {
             setAiResult({ type: 'Error', content: 'Table generation failed. Please try again.', format: 'text' });
         } finally {
@@ -700,8 +699,8 @@ const NoteEditor = () => {
         setAiResult(null);
         setShowAiModal(true);
         try {
-            const rewritten = await rewriteNote(content, rewriteStyle);
-            setAiResult({ type: `Rewrite (${rewriteStyle})`, content: rewritten, format: 'text' });
+            const { data } = await api.post('/ai/rewrite', { content, style: rewriteStyle });
+            setAiResult({ type: `Rewrite (${rewriteStyle})`, content: data.rewritten, format: 'text' });
         } catch (error) {
             setAiResult({ type: 'Error', content: 'Rewrite failed. Please try again.', format: 'text' });
         } finally {
