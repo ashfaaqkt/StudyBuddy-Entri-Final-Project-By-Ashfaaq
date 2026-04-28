@@ -132,4 +132,4 @@ const getScores = async (req, res) => {
     return res.json(scores);
 };
 
-module.exports = { summarize, generateQuiz, generateTable, rewrite, saveScore, getScores };
+module.exports = { summarize, generateQuiz, generateTable, rewrite, chat, saveScore, getScores };
