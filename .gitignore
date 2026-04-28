@@ -40,3 +40,6 @@ Thumbs.db
 # Misc
 *.local
 coverage/
+
+# Claude Code local memory
+.claude/
