@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import QuillBetterTable from 'quill-better-table';
+import 'quill-better-table/dist/quill-better-table.css';
+import html2canvas from 'html2canvas';
 import { useForm, Controller } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
@@ -65,6 +68,8 @@ if (typeof window !== 'undefined') {
                 Font.whitelist = FONT_WHITELIST;
                 QuillRef.register(Font, true);
             }
+            // Register quill-better-table module so Quill knows about table blots
+            QuillRef.register({ 'modules/better-table': QuillBetterTable }, true);
         }
     } catch (error) {
         console.warn('Quill setup failed:', error);
@@ -209,10 +214,20 @@ const NoteEditor = () => {
             toolbar: {
                 container: '#note-toolbar'
             },
+            'better-table': {
+                operationMenu: {
+                    items: {
+                        unmergeCells: { text: 'Unmerge Cells' },
+                    },
+                },
+            },
+            keyboard: {
+                bindings: QuillBetterTable.keyboardBindings,
+            },
             clipboard: {
                 matchVisual: false,
-                matchers
-            }
+                matchers,
+            },
         };
     }, []);
 
@@ -233,7 +248,7 @@ const NoteEditor = () => {
             'color',
             'background',
             'image',
-            'table'
+            // quill-better-table registers its own format names; no manual 'table' entry needed
         ];
     }, []);
 
@@ -282,39 +297,19 @@ const NoteEditor = () => {
         editor.setSelection(index + 2, 0, 'silent');
     };
 
-    const buildTableHtml = (tableId, rows = 2, cols = 2) => {
-        const rowHtml = Array.from({ length: rows })
-            .map(() => `<tr>${'<td><br/></td>'.repeat(cols)}</tr>`)
-            .join('');
-        return `
-            <div class="sb-table-wrap" data-table-id="${tableId}">
-                <table data-table-id="${tableId}">
-                    <tbody>${rowHtml}</tbody>
-                </table>
-                <div class="sb-table-controls" data-table-id="${tableId}" contenteditable="false">
-                    <button type="button" class="sb-table-control-btn" data-sb-table-action="add-row" data-table-id="${tableId}">Row +</button>
-                    <button type="button" class="sb-table-control-btn" data-sb-table-action="add-col" data-table-id="${tableId}">Col +</button>
-                </div>
-            </div>
-            <p><br/></p>
-        `;
-    };
 
     const insertTable = () => {
         const editor = quillRef.current?.getEditor();
         if (!editor) return;
-        const range = editor.getSelection(true);
-        // Insert a simple visual separator and a placeholder for table
-        // Since rich tables are proving unstable, we provide a clean template
-        const tableTemplate = `\n
-[TABLE START]
-| Column 1 | Column 2 | Column 3 |
-|----------|----------|----------|
-| Data 1   | Data 2   | Data 3   |
-[TABLE END]\n`;
-        editor.insertText(range.index, tableTemplate, 'user');
-        editor.setSelection(range.index + tableTemplate.length, 0);
+        // Move cursor to end of current line so the table doesn't split a paragraph
+        const range = editor.getSelection(true) || { index: editor.getLength() };
+        editor.setSelection(range.index, 0);
+        const tableModule = editor.getModule('better-table');
+        if (tableModule) {
+            tableModule.insertTable(3, 3);
+        }
     };
+
 
     const handleAttachAction = (type) => {
         setShowAttachMenu(false);
@@ -372,66 +367,125 @@ const NoteEditor = () => {
     const buildExportElement = () => {
         const title = getValues('title') || 'StudyBuddy Note';
         const rawContent = getValues('content') || '';
+
         const wrapper = document.createElement('div');
-        wrapper.className = 'sb-editor sb-export-root';
-        wrapper.style.position = 'fixed';
-        wrapper.style.left = '-10000px';
-        wrapper.style.top = '0';
-        wrapper.style.opacity = '1';
-        wrapper.style.pointerEvents = 'none';
-        wrapper.style.zIndex = '-1';
-        wrapper.style.width = '794px';
-        wrapper.style.padding = '32px';
-        wrapper.style.background = '#ffffff';
-        wrapper.style.color = '#0f1720';
-        wrapper.style.fontFamily = '"Poppins", Arial, sans-serif';
+        // No dark-theme class names — apply everything inline so html2canvas sees a clean white page
+        Object.assign(wrapper.style, {
+            position: 'absolute',
+            left: '-9999px',
+            top: '0',
+            width: '794px',
+            padding: '40px 48px',
+            background: '#ffffff',
+            color: '#111827',
+            fontFamily: '"Poppins", Arial, sans-serif',
+            fontSize: '13px',
+            lineHeight: '1.7',
+            boxSizing: 'border-box',
+        });
 
         const heading = document.createElement('h1');
         heading.textContent = title;
-        heading.style.fontSize = '20px';
-        heading.style.marginBottom = '16px';
+        Object.assign(heading.style, {
+            fontSize: '22px',
+            fontWeight: '700',
+            marginBottom: '20px',
+            color: '#111827',
+            borderBottom: '2px solid #e5e7eb',
+            paddingBottom: '10px',
+        });
 
         const content = document.createElement('div');
-        content.className = 'ql-editor sb-export-editor';
+        // Use ql-editor only for Quill rendering — but force light styles inline on the element itself
+        content.className = 'ql-editor';
+        content.setAttribute('contenteditable', 'false');
         content.innerHTML = rawContent || '<p></p>';
-        content.querySelectorAll('.sb-table-controls').forEach((node) => node.remove());
+        Object.assign(content.style, {
+            padding: '0',
+            background: '#ffffff',
+            color: '#111827',
+            fontFamily: '"Poppins", Arial, sans-serif',
+            minHeight: 'unset',
+            border: 'none',
+        });
+        // Remove any editor-only UI elements
+        content.querySelectorAll('.sb-table-controls, .qlbt-operation-menu, .qlbt-col-tool').forEach((n) => n.remove());
+
+        // Inline table styles so they survive html2canvas
+        content.querySelectorAll('table').forEach((tbl) => {
+            Object.assign(tbl.style, {
+                borderCollapse: 'collapse',
+                width: '100%',
+                marginBottom: '12px',
+                fontSize: '12px',
+            });
+        });
+        content.querySelectorAll('td, th').forEach((cell) => {
+            Object.assign(cell.style, {
+                border: '1px solid #d1d5db',
+                padding: '6px 10px',
+                background: '#ffffff',
+                color: '#111827',
+            });
+        });
 
         wrapper.appendChild(heading);
         wrapper.appendChild(content);
         document.body.appendChild(wrapper);
 
-        return {
-            element: wrapper,
-            title,
-            cleanup: () => wrapper.remove()
-        };
+        return { element: wrapper, title, cleanup: () => wrapper.remove() };
     };
 
     const renderPdfWithStyles = async () => {
         const { element, title, cleanup } = buildExportElement();
-        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-        if (document.fonts?.ready) {
-            try {
-                await document.fonts.ready;
-            } catch (error) {
-                console.warn('Font readiness check failed.', error);
-            }
-        }
-        await new Promise((resolve) => {
-            doc.html(element, {
-                x: 32,
-                y: 32,
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: '#ffffff'
-                },
-                autoPaging: 'text',
-                windowWidth: element.scrollWidth,
-                callback: () => resolve()
-            });
+
+        try {
+            if (document.fonts?.ready) await document.fonts.ready;
+        } catch (_) { /* ignore */ }
+
+        // Give the browser a tick to fully paint the off-screen element
+        await new Promise((r) => setTimeout(r, 80));
+
+        const canvas = await html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            width: element.scrollWidth,
+            height: element.scrollHeight,
         });
+
         cleanup();
+
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const margin = 32;
+        const usableW = pageW - margin * 2;
+        const imgH = (canvas.height * usableW) / canvas.width;
+        const imgData = canvas.toDataURL('image/jpeg', 0.97);
+
+        let remaining = imgH;
+        let srcY = 0;
+
+        while (remaining > 0) {
+            const sliceH = Math.min(remaining, pageH - margin * 2);
+            const slicePx = Math.round((sliceH / imgH) * canvas.height);
+
+            // Crop just this page's slice from the full canvas
+            const slice = document.createElement('canvas');
+            slice.width = canvas.width;
+            slice.height = slicePx;
+            slice.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+            const sliceData = slice.toDataURL('image/jpeg', 0.97);
+
+            doc.addImage(sliceData, 'JPEG', margin, margin, usableW, sliceH);
+
+            remaining -= sliceH;
+            srcY += slicePx;
+            if (remaining > 0) doc.addPage();
+        }
+
         return { doc, title };
     };
 
@@ -575,42 +629,6 @@ const NoteEditor = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    useEffect(() => {
-        const editor = getEditor();
-        if (!editor) return;
-        const handleTableControls = (event) => {
-            const target = event.target.closest?.('[data-sb-table-action]');
-            if (!target) return;
-            event.preventDefault();
-            const action = target.getAttribute('data-sb-table-action');
-            const controls = target.closest('.sb-table-controls');
-            const wrap = controls?.closest('.sb-table-wrap');
-            const table =
-                wrap?.querySelector('table') ||
-                (controls?.previousElementSibling?.tagName === 'TABLE' ? controls.previousElementSibling : null);
-            if (!table) return;
-            if (action === 'add-row') {
-                const cols = table.rows?.[0]?.cells?.length || 0;
-                if (!cols) return;
-                const row = table.insertRow(-1);
-                for (let i = 0; i < cols; i += 1) {
-                    const cell = row.insertCell(-1);
-                    cell.innerHTML = '<br/>';
-                }
-            }
-            if (action === 'add-col') {
-                Array.from(table.rows).forEach((row) => {
-                    const cell = row.insertCell(-1);
-                    cell.innerHTML = '<br/>';
-                });
-            }
-            editor.update('user');
-        };
-        editor.root.addEventListener('click', handleTableControls);
-        return () => {
-            editor.root.removeEventListener('click', handleTableControls);
-        };
-    }, []);
 
 
 
@@ -712,12 +730,17 @@ const NoteEditor = () => {
 
     const handleAppendAi = () => {
         if (!aiResult) return;
-        const current = getValues('content') || '';
-        const aiBody =
-            aiResult.format === 'html'
-                ? aiResult.content
-                : `<div class="sb-ai-appended-content">${renderMarkdown(aiResult.content)}</div>`;
-        setValue('content', `${current}<hr/><h2>AI ${aiResult.type}</h2>${aiBody}`);
+        const editor = quillRef.current?.getEditor();
+        if (aiResult.format === 'html' && editor) {
+            // Insert HTML (e.g. AI table) directly at cursor so Quill preserves the markup
+            const range = editor.getSelection(true) || { index: editor.getLength() };
+            const heading = `<h2>AI ${aiResult.type}</h2>`;
+            editor.clipboard.dangerouslyPasteHTML(range.index, `<hr/>${heading}${aiResult.content}`, 'user');
+        } else {
+            const current = getValues('content') || '';
+            const aiBody = `<div class="sb-ai-appended-content">${renderMarkdown(aiResult.content)}</div>`;
+            setValue('content', `${current}<hr/><h2>AI ${aiResult.type}</h2>${aiBody}`);
+        }
         setShowAiModal(false);
     };
 
