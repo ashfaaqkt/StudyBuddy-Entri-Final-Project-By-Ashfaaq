@@ -9,7 +9,7 @@ const ProgressChart = () => {
 
     const data = quizScores.map((score, index) => ({
         name: `Quiz ${index + 1}`,
-        date: formatDate(score.date),
+        date: formatDate(score.createdAt),
         score: Math.round((score.score / score.total) * 100),
         subject: score.subject,
     }));

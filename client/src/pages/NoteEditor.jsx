@@ -1446,9 +1446,9 @@ const NoteEditor = () => {
                         title="Note Resources"
                         kicker={id ? 'Refine your note' : 'Create a new note'}
                         description="Attach sources or files and tie them to this note."
-                        defaultNoteId={id ? Number(id) : null}
-                        defaultNoteTitle={watch('title')}
-                        filterNoteId={id ? Number(id) : null}
+                        defaultNoteId={id || null}
+                        defaultNoteTitle={watch('title') || ''}
+                        filterNoteId={id || null}
                         emptyMessage="No resources linked to this note yet."
                     />
                 </aside>

@@ -23,7 +23,7 @@ const TimerOverlay = () => {
 
     return (
         <div
-            className={`fixed right-6 z-[9999] transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) animate-in fade-in slide-in-from-bottom-4 ${isChatOpen ? 'bottom-[min(85vh,630px)]' : 'bottom-24'
+            className={`fixed right-6 z-[9999] transition-all duration-500 ease-in-out animate-in fade-in slide-in-from-bottom-4 ${isChatOpen ? 'bottom-[min(85vh,630px)]' : 'bottom-24'
                 }`}
         >
             <div className={`sb-card flex items-center gap-4 py-3 px-4 shadow-2xl border ${isBreak ? 'border-amber-400/30' : 'border-emerald-400/30'} backdrop-blur-md`}>

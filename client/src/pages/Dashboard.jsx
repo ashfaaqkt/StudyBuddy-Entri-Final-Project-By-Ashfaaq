@@ -35,7 +35,7 @@ const Dashboard = () => {
     const filteredNotes = notes.filter(note => {
         return (
             selectedSubject === 'All' ||
-            note.subject.toLowerCase() === selectedSubject.toLowerCase()
+            (note.subject || '').toLowerCase() === selectedSubject.toLowerCase()
         );
     });
 

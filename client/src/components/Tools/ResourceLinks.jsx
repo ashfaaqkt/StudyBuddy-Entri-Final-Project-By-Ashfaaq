@@ -106,7 +106,7 @@ const ResourceLinks = ({
         const titleValue = newResource.title.trim();
         const urlValue = newResource.url.trim();
         const finalSubject = newResource.subject === 'Other' ? customSubject.trim() : newResource.subject;
-        const noteId = newResource.noteId ? Number(newResource.noteId) : null;
+        const noteId = newResource.noteId || null;
         const noteTitle = noteId
             ? noteLookup.get(noteId) || defaultNoteTitle || 'Unlinked'
             : defaultNoteTitle || 'Unlinked';
@@ -200,7 +200,7 @@ const ResourceLinks = ({
         const titleValue = editDraft.title?.trim();
         const urlValue = editDraft.url?.trim();
         const finalSubject = editDraft.subject === 'Other' ? editCustomSubject.trim() : editDraft.subject;
-        const noteId = editDraft.noteId ? Number(editDraft.noteId) : null;
+        const noteId = editDraft.noteId || null;
         const noteTitle = noteId
             ? noteLookup.get(noteId) || editDraft.noteTitle || defaultNoteTitle || 'Unlinked'
             : editDraft.noteTitle || defaultNoteTitle || 'Unlinked';
@@ -236,12 +236,8 @@ const ResourceLinks = ({
         cancelEdit();
     };
 
-    const normalizedFilterId = filterNoteId ? Number(filterNoteId) : null;
-    const visibleLinks = normalizedFilterId
-        ? links.filter((link) => {
-            const linkNoteId = typeof link.noteId === 'string' ? Number(link.noteId) : link.noteId;
-            return linkNoteId === normalizedFilterId;
-        })
+    const visibleLinks = filterNoteId
+        ? links.filter((link) => String(link.noteId) === String(filterNoteId))
         : links;
 
     return (

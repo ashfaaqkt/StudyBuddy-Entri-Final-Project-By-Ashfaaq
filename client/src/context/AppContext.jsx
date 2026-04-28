@@ -42,8 +42,6 @@ export const AppProvider = ({ children }) => {
 
     const toggleTimer = () => setIsActive((prev) => !prev);
     const resetTimer = () => { setIsActive(false); setMode('work'); setTimeLeft(25 * 60); };
-    const startTimer = () => setIsActive(true);
-    const pauseTimer = () => setIsActive(false);
 
     // ── Notes API ──────────────────────────────────────────────────────────
     const fetchNotes = useCallback(async (search = '') => {
@@ -115,7 +113,7 @@ export const AppProvider = ({ children }) => {
             quizScores,
             addScore,
             timeLeft, isActive, mode,
-            toggleTimer, resetTimer, startTimer, pauseTimer,
+            toggleTimer, resetTimer,
             setTimeLeft, setMode,
             isChatOpen, setIsChatOpen,
         }}>
