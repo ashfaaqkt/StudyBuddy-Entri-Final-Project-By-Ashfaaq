@@ -6,6 +6,17 @@ A full-stack MERN application that lets students capture notes, summarize them w
 
 ---
 
+## Live Demo
+
+| | Link |
+|---|---|
+| **Frontend** (Vercel) | [study-buddy-entri-final-project-by.vercel.app](https://study-buddy-entri-final-project-by.vercel.app/#/) |
+| **Backend API** (Render) | [studybuddy-server-qx4w.onrender.com](https://studybuddy-server-qx4w.onrender.com) |
+
+> **Note:** The backend is hosted on Render's free tier — it may take 30–60 seconds to wake up on the first request after a period of inactivity.
+
+---
+
 ## About the Developer
 
 **Ashfaaq Feroz Muhammad**
