@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import QuillBetterTable from 'quill-better-table';
-import 'quill-better-table/dist/quill-better-table.css';
 import html2canvas from 'html2canvas';
 import { useForm, Controller } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -68,8 +66,6 @@ if (typeof window !== 'undefined') {
                 Font.whitelist = FONT_WHITELIST;
                 QuillRef.register(Font, true);
             }
-            // Register quill-better-table module so Quill knows about table blots
-            QuillRef.register({ 'modules/better-table': QuillBetterTable }, true);
         }
     } catch (error) {
         console.warn('Quill setup failed:', error);
@@ -214,20 +210,10 @@ const NoteEditor = () => {
             toolbar: {
                 container: '#note-toolbar'
             },
-            'better-table': {
-                operationMenu: {
-                    items: {
-                        unmergeCells: { text: 'Unmerge Cells' },
-                    },
-                },
-            },
-            keyboard: {
-                bindings: QuillBetterTable.keyboardBindings,
-            },
             clipboard: {
                 matchVisual: false,
-                matchers,
-            },
+                matchers
+            }
         };
     }, []);
 
@@ -248,7 +234,7 @@ const NoteEditor = () => {
             'color',
             'background',
             'image',
-            // quill-better-table registers its own format names; no manual 'table' entry needed
+            'table'
         ];
     }, []);
 
@@ -298,16 +284,36 @@ const NoteEditor = () => {
     };
 
 
+    const buildTableHtml = (tableId, rows = 2, cols = 2) => {
+        const rowHtml = Array.from({ length: rows })
+            .map(() => `<tr>${'<td><br/></td>'.repeat(cols)}</tr>`)
+            .join('');
+        return `
+            <div class="sb-table-wrap" data-table-id="${tableId}">
+                <table data-table-id="${tableId}">
+                    <tbody>${rowHtml}</tbody>
+                </table>
+                <div class="sb-table-controls" data-table-id="${tableId}" contenteditable="false">
+                    <button type="button" class="sb-table-control-btn" data-sb-table-action="add-row" data-table-id="${tableId}">Row +</button>
+                    <button type="button" class="sb-table-control-btn" data-sb-table-action="add-col" data-table-id="${tableId}">Col +</button>
+                </div>
+            </div>
+            <p><br/></p>
+        `;
+    };
+
     const insertTable = () => {
         const editor = quillRef.current?.getEditor();
         if (!editor) return;
-        // Move cursor to end of current line so the table doesn't split a paragraph
-        const range = editor.getSelection(true) || { index: editor.getLength() };
-        editor.setSelection(range.index, 0);
-        const tableModule = editor.getModule('better-table');
-        if (tableModule) {
-            tableModule.insertTable(3, 3);
-        }
+        const range = editor.getSelection(true);
+        const tableTemplate = `\n
+[TABLE START]
+| Column 1 | Column 2 | Column 3 |
+|----------|----------|----------|
+| Data 1   | Data 2   | Data 3   |
+[TABLE END]\n`;
+        editor.insertText(range.index, tableTemplate, 'user');
+        editor.setSelection(range.index + tableTemplate.length, 0);
     };
 
 
@@ -629,8 +635,42 @@ const NoteEditor = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-
-
+    useEffect(() => {
+        const editor = getEditor();
+        if (!editor) return;
+        const handleTableControls = (event) => {
+            const target = event.target.closest?.('[data-sb-table-action]');
+            if (!target) return;
+            event.preventDefault();
+            const action = target.getAttribute('data-sb-table-action');
+            const controls = target.closest('.sb-table-controls');
+            const wrap = controls?.closest('.sb-table-wrap');
+            const table =
+                wrap?.querySelector('table') ||
+                (controls?.previousElementSibling?.tagName === 'TABLE' ? controls.previousElementSibling : null);
+            if (!table) return;
+            if (action === 'add-row') {
+                const cols = table.rows?.[0]?.cells?.length || 0;
+                if (!cols) return;
+                const row = table.insertRow(-1);
+                for (let i = 0; i < cols; i += 1) {
+                    const cell = row.insertCell(-1);
+                    cell.innerHTML = '<br/>';
+                }
+            }
+            if (action === 'add-col') {
+                Array.from(table.rows).forEach((row) => {
+                    const cell = row.insertCell(-1);
+                    cell.innerHTML = '<br/>';
+                });
+            }
+            editor.update('user');
+        };
+        editor.root.addEventListener('click', handleTableControls);
+        return () => {
+            editor.root.removeEventListener('click', handleTableControls);
+        };
+    }, []);
 
     const onSubmit = async (data) => {
         const tempDiv = document.createElement('div');
@@ -730,17 +770,12 @@ const NoteEditor = () => {
 
     const handleAppendAi = () => {
         if (!aiResult) return;
-        const editor = quillRef.current?.getEditor();
-        if (aiResult.format === 'html' && editor) {
-            // Insert HTML (e.g. AI table) directly at cursor so Quill preserves the markup
-            const range = editor.getSelection(true) || { index: editor.getLength() };
-            const heading = `<h2>AI ${aiResult.type}</h2>`;
-            editor.clipboard.dangerouslyPasteHTML(range.index, `<hr/>${heading}${aiResult.content}`, 'user');
-        } else {
-            const current = getValues('content') || '';
-            const aiBody = `<div class="sb-ai-appended-content">${renderMarkdown(aiResult.content)}</div>`;
-            setValue('content', `${current}<hr/><h2>AI ${aiResult.type}</h2>${aiBody}`);
-        }
+        const current = getValues('content') || '';
+        const aiBody =
+            aiResult.format === 'html'
+                ? aiResult.content
+                : `<div class="sb-ai-appended-content">${renderMarkdown(aiResult.content)}</div>`;
+        setValue('content', `${current}<hr/><h2>AI ${aiResult.type}</h2>${aiBody}`);
         setShowAiModal(false);
     };
 
