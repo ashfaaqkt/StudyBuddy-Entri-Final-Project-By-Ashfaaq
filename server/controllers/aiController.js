@@ -3,13 +3,16 @@ const QuizScore = require('../models/QuizScore');
 
 const MAX_INPUT_CHARS = 8000;
 
-// All free-tier Google AI Studio models, tried in order
+// Free-tier Google AI Studio models, tried in order.
+// 1.5 models removed — they return 404 on v1beta as of 2025.
 const FREE_MODELS = [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
     'gemini-2.0-flash',
     'gemini-2.0-flash-lite',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-pro',
+    'gemini-2.5-pro',
+    'gemini-2.0-flash-exp',
+    'gemini-2.0-flash-thinking-exp',
 ];
 
 const normalizeContent = (text) =>
@@ -26,7 +29,9 @@ const parseJSONResponse = (text) => {
     }
 };
 
-// Tries each model in FREE_MODELS until one succeeds, logs every failure
+// Tries each model in FREE_MODELS until one succeeds, logs every failure.
+// 404 = model not found/deprecated → skip immediately.
+// 429 = quota hit → log quota details and skip to next model.
 const generateWithFallback = async (prompt, action) => {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     let lastError;
@@ -37,14 +42,23 @@ const generateWithFallback = async (prompt, action) => {
             const model = genAI.getGenerativeModel({ model: modelName });
             const result = await model.generateContent(prompt);
             const text = result.response.text();
-            console.log(`[AI:${action}] Success with model: ${modelName}`);
+            console.log(`[AI:${action}] ✓ Success with model: ${modelName}`);
             return text;
         } catch (err) {
             const status = err?.status ?? err?.httpError ?? 'unknown';
             const reason = err?.message ?? String(err);
-            console.error(
-                `[AI:${action}] FAILED model=${modelName} status=${status} reason=${reason}`
-            );
+
+            if (status === 404) {
+                console.warn(`[AI:${action}] SKIP model=${modelName} — not found or deprecated (404)`);
+            } else if (status === 429) {
+                // Extract retry delay if present
+                const retryMatch = reason.match(/retry in ([0-9.]+s)/i);
+                const retryHint = retryMatch ? ` (retry after ${retryMatch[1]})` : '';
+                console.warn(`[AI:${action}] QUOTA EXCEEDED model=${modelName}${retryHint} — trying next model`);
+            } else {
+                console.error(`[AI:${action}] FAILED model=${modelName} status=${status} reason=${reason}`);
+            }
+
             lastError = err;
         }
     }
