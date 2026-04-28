@@ -1853,3 +1853,33 @@
     transform: translateX(120%);
   }
 }
+
+/* ── Gemini Cooking Loader ─────────────────────────────────── */
+@keyframes gemini-shimmer-text {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+@keyframes gemini-dot-bounce {
+  0%, 80%, 100% { transform: translateY(0) scale(1);   opacity: 0.3; }
+  40%           { transform: translateY(-10px) scale(1.4); opacity: 1; }
+}
+
+.gemini-cook-shimmer {
+  background: linear-gradient(90deg, #5eead4, #38bdf8, #fbbf24, #fb923c, #38bdf8, #5eead4);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gemini-shimmer-text 3s ease infinite;
+}
+
+.gemini-cook-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5eead4, #38bdf8);
+  animation: gemini-dot-bounce 1.1s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(94,234,212,0.6);
+}

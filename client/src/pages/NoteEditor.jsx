@@ -8,6 +8,7 @@ import api from '../services/api';
 import { renderMarkdown } from '../utils/helpers';
 import { HiOutlineArrowLeft, HiOutlineSparkles, HiOutlineTable, HiOutlineSave, HiOutlinePencilAlt, HiSparkles, HiChevronDown, HiOutlineCheck, HiOutlinePaperClip, HiOutlineShare, HiOutlinePrinter, HiOutlinePhotograph, HiOutlineLink, HiOutlineMicrophone, HiOutlineDownload, HiOutlineSun, HiOutlineMoon } from 'react-icons/hi';
 import ResourceLinks from '../components/Tools/ResourceLinks';
+import GeminiCookingLoader from '../components/UI/GeminiCookingLoader';
 import jsPDF from 'jspdf';
 
 const SUBJECT_OPTIONS = ['Computer Science', 'Mathematics', 'Science', 'Literature', 'History', 'Psychology', 'Business', 'Other'];
@@ -95,6 +96,7 @@ const NoteEditor = () => {
 
     const selectedSubject = watch('subject');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isQuizLoading, setIsQuizLoading] = useState(false);
     const [aiResult, setAiResult] = useState(null);
     const [showAiModal, setShowAiModal] = useState(false);
     const [loadedId, setLoadedId] = useState(null);
@@ -674,7 +676,7 @@ const NoteEditor = () => {
     const handleGenerateQuiz = async () => {
         const content = extractPlainText(getValues('content'));
         if (!content) return alert('Please add note content first.');
-        setIsGenerating(true);
+        setIsQuizLoading(true);
         setShowAiModal(false);
         try {
             const { data } = await api.post('/ai/quiz', { content });
@@ -688,7 +690,7 @@ const NoteEditor = () => {
         } catch (error) {
             alert('Quiz generation failed.');
         } finally {
-            setIsGenerating(false);
+            setIsQuizLoading(false);
         }
     };
 
@@ -1393,6 +1395,8 @@ const NoteEditor = () => {
                     />
                 </aside>
             </form>
+
+            {isQuizLoading && <GeminiCookingLoader />}
 
             {showAiModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
