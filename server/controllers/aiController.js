@@ -3,10 +3,14 @@ const QuizScore = require('../models/QuizScore');
 
 const MAX_INPUT_CHARS = 8000;
 
-const getModel = () => {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-};
+// All free-tier Google AI Studio models, tried in order
+const FREE_MODELS = [
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-1.5-pro',
+];
 
 const normalizeContent = (text) =>
     text && text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) + '\n[Truncated]' : text || '';
@@ -22,27 +26,57 @@ const parseJSONResponse = (text) => {
     }
 };
 
-const summarize = async (req, res) => {
-    const { content } = req.body;
-    if (!content) return res.status(400).json({ message: 'content is required' });
+// Tries each model in FREE_MODELS until one succeeds, logs every failure
+const generateWithFallback = async (prompt, action) => {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    let lastError;
 
-    const model = getModel();
-    const prompt = `Summarize the following study notes into 4-6 concise bullet points.
+    for (const modelName of FREE_MODELS) {
+        try {
+            console.log(`[AI:${action}] Trying model: ${modelName}`);
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(prompt);
+            const text = result.response.text();
+            console.log(`[AI:${action}] Success with model: ${modelName}`);
+            return text;
+        } catch (err) {
+            const status = err?.status ?? err?.httpError ?? 'unknown';
+            const reason = err?.message ?? String(err);
+            console.error(
+                `[AI:${action}] FAILED model=${modelName} status=${status} reason=${reason}`
+            );
+            lastError = err;
+        }
+    }
+
+    console.error(`[AI:${action}] All models exhausted. Last error:`, lastError);
+    throw lastError;
+};
+
+const summarize = async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) return res.status(400).json({ message: 'content is required' });
+
+        const prompt = `Summarize the following study notes into 4-6 concise bullet points.
 Keep each bullet short and high signal. Return plain text bullet points only.
 Notes:
 ${normalizeContent(content)}`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    return res.json({ summary: text });
+        const text = await generateWithFallback(prompt, 'summarize');
+        return res.json({ summary: text });
+    } catch (err) {
+        console.error('[AI:summarize] Unhandled error:', err);
+        return res.status(500).json({ message: 'AI summarize failed. Check server logs.' });
+    }
 };
 
 const generateQuiz = async (req, res) => {
-    const { content } = req.body;
-    if (!content) return res.status(400).json({ message: 'content is required' });
+    try {
+        const { content } = req.body;
+        if (!content) return res.status(400).json({ message: 'content is required' });
 
-    const model = getModel();
-    const prompt = `You are creating a quiz from study notes.
+        const prompt = `You are creating a quiz from study notes.
 Generate exactly 5 multiple-choice questions based ONLY on the notes.
 Return a JSON array with 5 objects:
 [
@@ -52,36 +86,44 @@ Rules: 4 options, only one correct answer, ids must be 1-5, no extra text outsid
 Notes:
 ${normalizeContent(content)}`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    const questions = parseJSONResponse(text);
-    return res.json({ questions });
+        const text = await generateWithFallback(prompt, 'quiz');
+        const questions = parseJSONResponse(text);
+        return res.json({ questions });
+    } catch (err) {
+        console.error('[AI:quiz] Unhandled error:', err);
+        return res.status(500).json({ message: 'AI quiz generation failed. Check server logs.' });
+    }
 };
 
 const saveScore = async (req, res) => {
-    const { score, total, subject, noteId } = req.body;
+    try {
+        const { score, total, subject, noteId } = req.body;
 
-    if (score === undefined || total === undefined) {
-        return res.status(400).json({ message: 'score and total are required' });
+        if (score === undefined || total === undefined) {
+            return res.status(400).json({ message: 'score and total are required' });
+        }
+
+        const quizScore = await QuizScore.create({
+            user: req.user._id,
+            score,
+            total,
+            subject: subject || 'Practice Quiz',
+            noteId: noteId || null,
+        });
+
+        return res.status(201).json(quizScore);
+    } catch (err) {
+        console.error('[saveScore] Error:', err);
+        return res.status(500).json({ message: 'Failed to save score.' });
     }
-
-    const quizScore = await QuizScore.create({
-        user: req.user._id,
-        score,
-        total,
-        subject: subject || 'Practice Quiz',
-        noteId: noteId || null,
-    });
-
-    return res.status(201).json(quizScore);
 };
 
 const generateTable = async (req, res) => {
-    const { content } = req.body;
-    if (!content) return res.status(400).json({ message: 'content is required' });
+    try {
+        const { content } = req.body;
+        if (!content) return res.status(400).json({ message: 'content is required' });
 
-    const model = getModel();
-    const prompt = `Create a concise HTML table that summarizes the notes.
+        const prompt = `Create a concise HTML table that summarizes the notes.
 Rules:
 - Return ONLY the <table>...</table> HTML (no markdown, no backticks, no extra text).
 - Include class="sb-ai-table" on the <table>.
@@ -90,46 +132,60 @@ Rules:
 Notes:
 ${normalizeContent(content)}`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    return res.json({ table: text });
+        const text = await generateWithFallback(prompt, 'table');
+        return res.json({ table: text });
+    } catch (err) {
+        console.error('[AI:table] Unhandled error:', err);
+        return res.status(500).json({ message: 'AI table generation failed. Check server logs.' });
+    }
 };
 
 const rewrite = async (req, res) => {
-    const { content, style = 'neutral' } = req.body;
-    if (!content) return res.status(400).json({ message: 'content is required' });
+    try {
+        const { content, style = 'neutral' } = req.body;
+        if (!content) return res.status(400).json({ message: 'content is required' });
 
-    const model = getModel();
-    const prompt = `Rewrite the following notes in a ${style} writing style.
+        const prompt = `Rewrite the following notes in a ${style} writing style.
 Keep the meaning intact. Preserve lists where possible. Return plain text.
 Notes:
 ${normalizeContent(content)}`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    return res.json({ rewritten: text });
+        const text = await generateWithFallback(prompt, 'rewrite');
+        return res.json({ rewritten: text });
+    } catch (err) {
+        console.error('[AI:rewrite] Unhandled error:', err);
+        return res.status(500).json({ message: 'AI rewrite failed. Check server logs.' });
+    }
 };
 
 const chat = async (req, res) => {
-    const { messages } = req.body;
-    if (!Array.isArray(messages) || messages.length === 0) {
-        return res.status(400).json({ message: 'messages array is required' });
+    try {
+        const { messages } = req.body;
+        if (!Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ message: 'messages array is required' });
+        }
+
+        const history = messages
+            .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+            .join('\n');
+        const prompt = `You are a helpful study assistant. Keep answers concise, clear, and relevant to students. Use markdown for simple formatting if needed (bold, lists).\n\nChat History:\n${history}\nAssistant:`;
+
+        const text = await generateWithFallback(prompt, 'chat');
+        return res.json({ reply: text });
+    } catch (err) {
+        console.error('[AI:chat] Unhandled error:', err);
+        return res.status(500).json({ message: 'AI chat failed. Check server logs.' });
     }
-
-    const model = getModel();
-    const history = messages
-        .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-        .join('\n');
-    const prompt = `You are a helpful study assistant. Keep answers concise, clear, and relevant to students. Use markdown for simple formatting if needed (bold, lists).\n\nChat History:\n${history}\nAssistant:`;
-
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    return res.json({ reply: text });
 };
 
 const getScores = async (req, res) => {
-    const scores = await QuizScore.find({ user: req.user._id }).sort({ createdAt: -1 });
-    return res.json(scores);
+    try {
+        const scores = await QuizScore.find({ user: req.user._id }).sort({ createdAt: -1 });
+        return res.json(scores);
+    } catch (err) {
+        console.error('[getScores] Error:', err);
+        return res.status(500).json({ message: 'Failed to fetch scores.' });
+    }
 };
 
 module.exports = { summarize, generateQuiz, generateTable, rewrite, chat, saveScore, getScores };
