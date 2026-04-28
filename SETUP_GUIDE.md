@@ -1,6 +1,8 @@
 # StudyBuddy — Complete Setup Guide
 
-Follow these steps in order to get the full stack running locally and deployed.
+> Built by **Ashfaaq Feroz Muhammad** as the Final Project for the **Entri Elevate Full Stack MERN** programme.
+
+Follow these steps in order to get the full stack running locally and deployed to the cloud.
 
 ---
 
@@ -46,7 +48,7 @@ npm run install:all
 
 1. Go to https://aistudio.google.com/app/apikey
 2. Click **"Create API key"** → copy the key (starts with `AIza...`).
-3. The free tier is enough for development.
+3. The free tier is sufficient for development and testing.
 
 ---
 
@@ -58,7 +60,7 @@ Generate a cryptographically secure 32-byte secret:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Copy the printed hex string.
+Copy the printed hex string — this becomes your `JWT_SECRET`.
 
 ---
 
@@ -70,7 +72,7 @@ Copy the printed hex string.
 cp server/.env.example server/.env
 ```
 
-Edit `server/.env`:
+Edit `server/.env` with your values:
 
 ```
 PORT=5000
@@ -103,7 +105,7 @@ npm run dev
 ```
 
 - Frontend: http://localhost:5173
-- Backend API: http://localhost:5000/api/health (should return `{"status":"ok"}`)
+- Backend API: http://localhost:5000/api/health → should return `{"status":"ok"}`
 
 ---
 
@@ -111,40 +113,40 @@ npm run dev
 
 1. Push your code to GitHub.
 2. Go to https://render.com → **New** → **Web Service**.
-3. Connect your GitHub repo and select the repo.
-4. Set the following:
+3. Connect your GitHub repo and select it.
+4. Configure the service:
    - **Root Directory**: `server`
    - **Build Command**: `npm install`
    - **Start Command**: `node index.js`
    - **Node version**: 18
-5. Under **Environment Variables**, add each key from `server/.env` (never upload the `.env` file itself):
+5. Under **Environment Variables**, add each key (never upload the `.env` file itself):
    - `MONGO_URI`
    - `JWT_SECRET`
    - `GEMINI_API_KEY`
    - `NODE_ENV` → `production`
-   - `CLIENT_URL` → your Vercel frontend URL (see step 9, fill in after deploy)
-6. Click **Create Web Service**. Render will give you a URL like `https://studybuddy-api.onrender.com`.
+   - `CLIENT_URL` → your Vercel frontend URL (fill in after step 9)
+6. Click **Create Web Service**. Render gives you a URL like `https://studybuddy-api.onrender.com`.
 
 ---
 
 ## 9. Deploy — Frontend on Vercel
 
 1. Go to https://vercel.com → **New Project** → Import your GitHub repo.
-2. Set the following:
+2. Configure the project:
    - **Root Directory**: `client`
    - **Framework Preset**: Vite
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
 3. Under **Environment Variables**, add:
-   - `VITE_API_URL` → `https://studybuddy-api.onrender.com/api` (your Render URL + `/api`)
-4. Click **Deploy**. Vercel will give you a URL like `https://studybuddy.vercel.app`.
-5. Go back to Render → your web service → **Environment** → update `CLIENT_URL` to your Vercel URL, then **Redeploy**.
+   - `VITE_API_URL` → `https://studybuddy-api.onrender.com/api`
+4. Click **Deploy**. Vercel gives you a URL like `https://studybuddy.vercel.app`.
+5. Go back to Render → **Environment** → update `CLIENT_URL` to your Vercel URL → **Redeploy**.
 
 ---
 
-## 10. Link Local Repo to the New GitHub Remote
+## 10. Link Local Repo to GitHub Remote
 
-If you need to set the remote to the new repository:
+If you need to point your local repo at a new remote:
 
 ```bash
 git remote remove origin
@@ -159,8 +161,16 @@ git push -u origin main
 
 | Issue | Fix |
 |-------|-----|
-| `ECONNREFUSED` on API calls | Make sure `npm run dev` is running and `VITE_API_URL` points to `http://localhost:5000/api` |
-| `MongoServerError: bad auth` | Check username/password in `MONGO_URI` (special chars must be URL-encoded) |
+| `ECONNREFUSED` on API calls | Ensure `npm run dev` is running and `VITE_API_URL` points to `http://localhost:5000/api` |
+| `MongoServerError: bad auth` | Check username/password in `MONGO_URI` — special characters must be URL-encoded |
 | `401 Unauthorized` on all API routes | Token expired or missing — log out and log back in |
-| Gemini returns 429 | You've hit the free-tier rate limit; wait 60 seconds and retry |
-| Render cold start (30 s delay) | Free Render instances spin down after 15 min of inactivity — this is normal |
+| Gemini returns 429 | Free-tier rate limit hit; wait 60 seconds and retry |
+| Render cold start (30 s delay) | Free Render instances spin down after 15 min of inactivity — this is expected behaviour |
+
+---
+
+## About This Project
+
+**StudyBuddy** was designed and built by **Ashfaaq Feroz Muhammad** as the capstone Final Project for the **Entri Elevate Full Stack MERN** programme. It is intended for educational use and demonstrates full-stack development skills including REST API design, JWT authentication, MongoDB data modelling, React state management, and cloud deployment.
+
+For questions or feedback: ashfaaqktmail@gmail.com
