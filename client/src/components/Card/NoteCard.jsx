@@ -7,7 +7,7 @@ const NoteCard = ({ note, onDelete }) => {
 
     return (
         <div
-            onClick={() => navigate(`/edit-note/${note.id}`)}
+            onClick={() => navigate(`/edit-note/${note._id}`)}
             className="sb-card cursor-pointer transition-all hover:-translate-y-1 hover:border-white/20"
         >
             <div className="flex items-start justify-between gap-4">
@@ -15,7 +15,7 @@ const NoteCard = ({ note, onDelete }) => {
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
-                        onDelete(note.id);
+                        onDelete(note._id);
                     }}
                     className="p-2 rounded-xl border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
                     title="Delete Note"

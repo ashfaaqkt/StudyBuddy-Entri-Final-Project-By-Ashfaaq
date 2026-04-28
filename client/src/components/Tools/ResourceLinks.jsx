@@ -61,7 +61,7 @@ const ResourceLinks = ({
     const [editError, setEditError] = useState('');
 
     const noteLookup = useMemo(() => {
-        return new Map(notes.map((note) => [note.id, note.title]));
+        return new Map(notes.map((note) => [note._id, note.title]));
     }, [notes]);
 
     useEffect(() => {
@@ -319,7 +319,7 @@ const ResourceLinks = ({
                             >
                                 <option value="">Link to note (optional)</option>
                                 {notes.map((note) => (
-                                    <option key={note.id} value={note.id}>
+                                    <option key={note._id} value={note._id}>
                                         {note.title}
                                     </option>
                                 ))}
@@ -433,7 +433,7 @@ const ResourceLinks = ({
                                             >
                                                 <option value="">Link to note (optional)</option>
                                                 {notes.map((note) => (
-                                                    <option key={note.id} value={note.id}>
+                                                    <option key={note._id} value={note._id}>
                                                         {note.title}
                                                     </option>
                                                 ))}
